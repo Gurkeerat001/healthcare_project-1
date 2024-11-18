@@ -79,9 +79,52 @@ const loginUser = asyncHandler(async (req, res) => {
     res.status(200).json({
         _id: user.id,
         email: user.email,
-        token: generateJwtToken(user.id), // Return the JWT token
+        token: generateJwtToken(user.id), 
         message: "Login successful"
     });
 });
 
-module.exports = { registerUser, loginUser };
+// Get user profile
+const getUserProfile = asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const data = await User.findById(userId);  
+    
+    if (!data) {
+        return res.status(401).json({ message: "User not found" });
+    }
+    res.json(data);
+});
+
+// Update user profile
+const updateUserProfile = asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { firstName, lastName, email, age, gender, bloodGroup, phoneNumber, password } = req.body;
+
+    // Find user and return error if not found
+    const data = await User.findById(userId);
+    if (!data) return res.status(401).json({ message: "User not found" });
+
+    // Update password if provided
+    if (password) {
+        const salt = await bcrypt.genSalt(10);
+        data.password = await bcrypt.hash(password, salt);
+    }
+
+    // Update the user's fields with provided values
+    data.firstName = firstName || data.firstName;
+    data.lastName = lastName || data.lastName;
+    data.email = email || data.email;
+    data.age = age || data.age;
+    data.gender = gender || data.gender;
+    data.bloodGroup = bloodGroup || data.bloodGroup;
+    data.phoneNumber = phoneNumber || data.phoneNumber;
+
+    // Save the updated user
+    const updatedUser = await data.save();
+
+    // Return success message and updated user data
+    res.json({ message: "Profile updated successfully", user: updatedUser });
+});
+
+
+module.exports = { registerUser, loginUser, getUserProfile, updateUserProfile };
